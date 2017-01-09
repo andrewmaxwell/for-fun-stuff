@@ -52,7 +52,7 @@ window.Solver = (() => {
 	class Solver {
 		constructor(game){
 			this.game = game;
-			this.limit = 3e6;
+			this.limit = 1e7;
 		}
 		solve(start){
 

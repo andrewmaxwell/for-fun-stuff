@@ -6,69 +6,61 @@
 	var Solver = window.Solver;
 
 	var scenarios = {
-		simple: {
-			rows: 4,
-			cols: 5,
-			board: [ // 101,137
-				'moooO',
-				'obbbO',
-				'obbbO',
-				'ooOOO'
-			]
-		},
-		easy: {
-			rows: 4,
-			cols: 5,
-			board: [ // 214,250
-				'OoooO',
-				'obobo',
-				'oomoo',
-				'obobo',
-				'OoooO'
-			]
-		},
-		medium: {
-			rows: 5,
-			cols: 5,
-			board: [ // 1,746,461
-				'MoooO',
-				'obbbO',
-				'obbbO',
-				'obbbO',
-				'OOOOo'
-			]
-		},
-		hard: {
-			rows: 5,
-			cols: 5,
-			board: [ // 2,527,266
-				'OoooO',
-				'ooboo',
-				'mbobm',
-				'ooboo',
-				'OoooO'
-			]
-		},
-		reallyHard: {
-			rows: 5,
-			cols: 5,
-			board: [ // 7,334,579
-				'OOoOO',
-				'obbbo',
-				'obmbo',
-				'obbbo',
-				'OOoOO'
-			]
-		}
+		simple: [ // 101,137
+			'moooO',
+			'obbbO',
+			'obbbO',
+			'ooOOO'
+		],
+		easy: [ // 214,250
+			'OoooO',
+			'obobo',
+			'oomoo',
+			'obobo',
+			'OoooO'
+		],
+		medium: [ // 1,746,461
+			'MoooO',
+			'obbbO',
+			'obbbO',
+			'obbbO',
+			'OOOOo'
+		],
+		hard: [ // 2,527,266
+			'OoooO',
+			'ooboo',
+			'mbobm',
+			'ooboo',
+			'OoooO'
+		],
+		reallyHard: [ // 7,334,579
+			'OOoOO',
+			'obbbo',
+			'obmbo',
+			'obbbo',
+			'OOoOO'
+		],
+		another: [ // 3,809,383
+			'MooooO',
+			'ObbbbO',
+			'ObbbbO',
+			'OooooO'
+		],
+		another2: [ // 1,746,461
+			'mmoooO',
+			'mbbboo',
+			'oooooo',
+			'oOoooO'
+		]
 	};
 
-	var scenario = scenarios.hard; // change this to try other scenarios
+	var scenario = scenarios.another2; // change this to try other scenarios
 
-	var game = new Game(scenario.rows, scenario.cols);
+	var game = new Game(scenario.length, scenario[0].length);
 	var solver = new Solver(game);
 
 	console.profile('solve');
-	var solution = solver.solve(game.toState(scenario.board));
+	var solution = solver.solve(game.toState(scenario));
 	console.profileEnd('solve');
 
 	var canvases = solution.map(s => game.toCanvas(s, 400));
