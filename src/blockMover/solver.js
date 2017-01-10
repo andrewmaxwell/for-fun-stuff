@@ -7,39 +7,32 @@ function extractSolution(state){
 	return solution;
 }
 
-class Solver {
-	constructor(game){
-		this.game = game;
-		this.limit = 1e7;
-	}
-	solve(start){
+function solve(game, start, limit){
+	var queue = [start];
+	var seen = new Set();
 
-		var queue = [start];
-		var seen = new Set();
+	seen.add(game.toId(start));
 
-		seen.add(this.game.toId(start));
+	for (var i = 0; i < queue.length && queue.length < limit; i++){
+		var nextStates = game.getNextStates(queue[i]);
 
-		for (var i = 0; i < queue.length && queue.length < this.limit; i++){
-			var nextStates = this.game.getNextStates(queue[i]);
+		for (var j = 0; j < nextStates.length; j++){
+			var next = nextStates[j];
+			var nextId = game.toId(next);
 
-			for (var j = 0; j < nextStates.length; j++){
-				var next = nextStates[j];
-				var nextId = this.game.toId(next);
+			if (seen.add(nextId).size > queue.length){
+				next.prev = queue[i];
+				queue.push(next);
 
-				if (seen.add(nextId).size > queue.length){
-					next.prev = queue[i];
-					queue.push(next);
-
-					if (this.game.isSolved(next)){
-						console.log(queue.length + ' states checked');
-						return extractSolution(next);
-					}
+				if (game.isSolved(next)){
+					console.log(queue.length + ' states checked');
+					return extractSolution(next);
 				}
 			}
 		}
-
-		return [];
 	}
+
+	return [];
 }
 
-module.exports = Solver;
+module.exports = solve;

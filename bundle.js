@@ -82,8 +82,8 @@
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	const Game = __webpack_require__(3);
-	const Solver = __webpack_require__(4);
+	const blockMover = __webpack_require__(3);
+	const solve = __webpack_require__(4);
 
 	var scenarios = {
 		simple: [ // 101,137
@@ -125,27 +125,19 @@
 			'ObbbbO',
 			'ObbbbO',
 			'OooooO'
-		],
-		another2: [ // 1,746,461
-			'mmoooO',
-			'mbbboo',
-			'oooooo',
-			'oOoooO'
 		]
 	};
 
-	var scenario = scenarios.another2; // change this to try other scenarios
+	var scenario = scenarios.another; // change this to try other scenarios
 
-	var game = new Game(scenario.length, scenario[0].length);
-	var solver = new Solver(game);
+	var game = blockMover(scenario.length, scenario[0].length);
 
 	console.profile('solve');
-	var solution = solver.solve(game.toState(scenario));
+	var solution = solve(game, game.toState(scenario), 5e6);
 	console.profileEnd('solve');
 
 	var canvases = solution.map(s => game.toCanvas(s, 400));
-	if (!canvases.length) console.log('No solution found');
-	else {
+	if (canvases.length){
 
 		var frame = 0;
 
@@ -159,7 +151,7 @@
 			canvases[frame % canvases.length].style.display = 'block';
 			frame++;
 		}, 200);
-	}
+	} else console.log('No solution found');
 
 
 /***/ },
@@ -167,88 +159,87 @@
 /***/ function(module, exports) {
 
 	const EMPTY = 1, MOVER = 2, BLOCK = 3, EMPTY_GOAL = -1, MOVER_ON_GOAL = -2, BLOCK_ON_GOAL = -3;
-	const directions = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-	const colors = ['green', '#EEE', 'red', 'blue'];
+	const DIRECTIONS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+	const COLORS = ['green', '#EEE', 'red', 'blue'];
 
-	class Game {
-		constructor(rows, cols){
-			this.rows = rows;
-			this.cols = cols;
-		}
-		_getStateInDirection(state, moverX, moverY, dir){
+	function blockMover(rows, cols){
+
+		function getStateInDirection(state, moverX, moverY, dir){
 			// look for an empty spot in the dir direction, starting with one space away
-			var dist = 	(dir[0] > 0 ? this.cols - moverX - 1 : dir[0] < 0 ? moverX : 0) +
-									(dir[1] > 0 ? this.rows - moverY - 1 : dir[1] < 0 ? moverY : 0);
+			var dist = 	(dir[0] > 0 ? cols - moverX - 1 : dir[0] < 0 ? moverX : 0) +
+									(dir[1] > 0 ? rows - moverY - 1 : dir[1] < 0 ? moverY : 0);
 			for (var i = 1; i <= dist; i++) {
-				var cell = state[(moverY + dir[1] * i) * this.cols + moverX + dir[0] * i];
+				var cell = state[(moverY + dir[1] * i) * cols + moverX + dir[0] * i];
 				if (cell == EMPTY || cell == EMPTY_GOAL){
 					var copy = state.slice(0);
 					for (; i >= 0; i--){
-						var toIndex = (moverY + dir[1] * i) * this.cols + moverX + dir[0] * i;
-						var from = i ? Math.abs(state[toIndex - dir[1] * this.cols - dir[0]]) : EMPTY;
-						copy[toIndex] = state[toIndex] < 0 ? -from : from;
+						var toIndex = (moverY + dir[1] * i) * cols + moverX + dir[0] * i;
+						copy[toIndex] = (state[toIndex] < 0 ? -1 : 1) * (i ? Math.abs(state[toIndex - dir[1] * cols - dir[0]]) : EMPTY);
 					}
 					return copy;
 				}
 			}
 		}
-		getNextStates(state){
-			var result = [];
 
-			for (var y = 0; y < this.rows; y++){
-				for (var x = 0; x < this.cols; x++){
-					var cell = state[y * this.cols + x];
-					if (cell == MOVER || cell == MOVER_ON_GOAL){
-						for (var i = 0; i < directions.length; i++){
-							var newState = this._getStateInDirection(state, x, y, directions[i]);
-							if (newState) result.push(newState);
+		return {
+			getNextStates(state){
+				var result = [];
+				for (var y = 0; y < rows; y++){
+					for (var x = 0; x < cols; x++){
+						var cell = state[y * cols + x];
+						if (cell == MOVER || cell == MOVER_ON_GOAL){
+							for (var i = 0; i < DIRECTIONS.length; i++){
+								var newState = getStateInDirection(state, x, y, DIRECTIONS[i]);
+								if (newState) result.push(newState);
+							}
 						}
 					}
 				}
-			}
-			return result;
-		}
-		isSolved(state){
-			return !state.includes(EMPTY_GOAL) && !state.includes(MOVER_ON_GOAL);
-		}
-		toId(state){
-			// return state.join('');
-			var result = 0;
-			for (var i = 0; i < state.length; i++){
-				result = result * 3 + Math.abs(state[i]) - 1;
-			}
-			return result;
-		}
-		toState(start){
-			var lookup = {B: BLOCK_ON_GOAL, M: MOVER_ON_GOAL, O: EMPTY_GOAL, o: EMPTY, m: MOVER, b: BLOCK};
-			return start.join('').split('').map(c => lookup[c]);
-		}
-		toCanvas(state, canvasWidth){
-			var canvas = document.createElement('canvas');
-			var ctx = canvas.getContext('2d');
-
-			var scale = canvasWidth / this.cols;
-			canvas.height = this.rows * scale;
-			canvas.width = this.cols * scale;
-			ctx.scale(scale, scale);
-
-			for (var y = 0; y < this.rows; y++){
-				for (var x = 0; x < this.cols; x++){
-					var cell = state[y * this.cols + x];
-					if (cell < 0){
-						ctx.fillStyle = colors[0];
-						ctx.fillRect(x, y, 1, 1);
-					}
-					ctx.fillStyle = colors[Math.abs(cell)];
-					ctx.fillRect(x + 0.1, y + 0.1, 0.8, 0.8);
+				return result;
+			},
+			isSolved(state){
+				return !state.includes(EMPTY_GOAL) && !state.includes(MOVER_ON_GOAL);
+			},
+			toId(state){
+				// return state.join('');
+				var result = 0;
+				for (var i = 0; i < state.length; i++){
+					result = result * 3 + Math.abs(state[i]) - 1;
 				}
-			}
+				return result;
+			},
+			toState(start){
+				var lookup = {B: BLOCK_ON_GOAL, M: MOVER_ON_GOAL, O: EMPTY_GOAL, o: EMPTY, m: MOVER, b: BLOCK};
+				return start.join('').split('').map(c => lookup[c]);
+			},
+			toCanvas(state, canvasWidth){
+				var canvas = document.createElement('canvas');
+				var ctx = canvas.getContext('2d');
 
-			return canvas;
-		}
+				var scale = canvasWidth / cols;
+				canvas.height = rows * scale;
+				canvas.width = cols * scale;
+				ctx.scale(scale, scale);
+
+				for (var y = 0; y < rows; y++){
+					for (var x = 0; x < cols; x++){
+						var cell = state[y * cols + x];
+						if (cell < 0){
+							ctx.fillStyle = COLORS[0];
+							ctx.fillRect(x, y, 1, 1);
+						}
+						ctx.fillStyle = COLORS[Math.abs(cell)];
+						ctx.fillRect(x + 0.1, y + 0.1, 0.8, 0.8);
+					}
+				}
+
+				return canvas;
+			}
+		};
+
 	}
 
-	module.exports = Game;
+	module.exports = blockMover;
 
 
 /***/ },
@@ -264,42 +255,35 @@
 		return solution;
 	}
 
-	class Solver {
-		constructor(game){
-			this.game = game;
-			this.limit = 1e7;
-		}
-		solve(start){
+	function solve(game, start, limit){
+		var queue = [start];
+		var seen = new Set();
 
-			var queue = [start];
-			var seen = new Set();
+		seen.add(game.toId(start));
 
-			seen.add(this.game.toId(start));
+		for (var i = 0; i < queue.length && queue.length < limit; i++){
+			var nextStates = game.getNextStates(queue[i]);
 
-			for (var i = 0; i < queue.length && queue.length < this.limit; i++){
-				var nextStates = this.game.getNextStates(queue[i]);
+			for (var j = 0; j < nextStates.length; j++){
+				var next = nextStates[j];
+				var nextId = game.toId(next);
 
-				for (var j = 0; j < nextStates.length; j++){
-					var next = nextStates[j];
-					var nextId = this.game.toId(next);
+				if (seen.add(nextId).size > queue.length){
+					next.prev = queue[i];
+					queue.push(next);
 
-					if (seen.add(nextId).size > queue.length){
-						next.prev = queue[i];
-						queue.push(next);
-
-						if (this.game.isSolved(next)){
-							console.log(queue.length + ' states checked');
-							return extractSolution(next);
-						}
+					if (game.isSolved(next)){
+						console.log(queue.length + ' states checked');
+						return extractSolution(next);
 					}
 				}
 			}
-
-			return [];
 		}
+
+		return [];
 	}
 
-	module.exports = Solver;
+	module.exports = solve;
 
 
 /***/ },

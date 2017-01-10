@@ -1,5 +1,5 @@
-const Game = require('./game');
-const Solver = require('./solver');
+const blockMover = require('./blockMover');
+const solve = require('./solver');
 
 var scenarios = {
 	simple: [ // 101,137
@@ -41,27 +41,19 @@ var scenarios = {
 		'ObbbbO',
 		'ObbbbO',
 		'OooooO'
-	],
-	another2: [ // 1,746,461
-		'mmoooO',
-		'mbbboo',
-		'oooooo',
-		'oOoooO'
 	]
 };
 
-var scenario = scenarios.another2; // change this to try other scenarios
+var scenario = scenarios.another; // change this to try other scenarios
 
-var game = new Game(scenario.length, scenario[0].length);
-var solver = new Solver(game);
+var game = blockMover(scenario.length, scenario[0].length);
 
 console.profile('solve');
-var solution = solver.solve(game.toState(scenario));
+var solution = solve(game, game.toState(scenario), 5e6);
 console.profileEnd('solve');
 
 var canvases = solution.map(s => game.toCanvas(s, 400));
-if (!canvases.length) console.log('No solution found');
-else {
+if (canvases.length){
 
 	var frame = 0;
 
@@ -75,4 +67,4 @@ else {
 		canvases[frame % canvases.length].style.display = 'block';
 		frame++;
 	}, 200);
-}
+} else console.log('No solution found');
