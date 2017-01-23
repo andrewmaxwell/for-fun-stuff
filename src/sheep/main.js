@@ -15,9 +15,15 @@ const params = {
 	grassEnergyMult: 0.02, // multiplier for amount of energy gained by eating
 	energyLossRate: 0.0005, // each sheep loses x energy per iteration
 	newbornEnergy: 0.01, // sheep start with x energy when they are born or reproduce
-	ageNutritionMult: 0.00003, // sheep get less energy as they age
+	ageAmt: 0.00003, // sheep age this amount per iteration, they get e^-age times the nutrition, so at age 1, that's 37%
 
-	raptorAppears: 0, // when sheep population reaches this level and there are no raptors, one appears
+	rockScaleX: 30, // rocks are stretched horizontally this much
+	rockScaleY: 10, // rocks are stretched veritcally this much
+	rockThreshold: 0.35, // rocks cover roughly this much of the screen
+
+	raptorAppears: 100, // when sheep population reaches this level and there are no raptors, one appears
+	sightDistance: 32,
+	raptorSpeed: 1.25 // x times the speed of a sheep
 	// raptorStartingEnergy: 100
 };
 
@@ -41,12 +47,7 @@ var loop = () => {
 
 	renderer.render();
 
-	stats.render(
-		game.getSheeps().map(s => ({
-			age: s.age * params.ageNutritionMult,
-			energy: s.energy
-		}))
-	);
+	stats.render(game.getSheeps());
 
 	// setTimeout(loop, 200);
 	requestAnimationFrame(loop);
