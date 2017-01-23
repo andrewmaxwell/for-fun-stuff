@@ -171,8 +171,8 @@ function makeSim(params){
 		getRaptors(){
 			return raptors;
 		},
-		getCell(x, y){
-			return grid.getCell(x, y);
+		getGrid(){
+			return grid;
 		}
 	};
 }
