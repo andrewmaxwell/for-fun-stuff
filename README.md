@@ -1,5 +1,5 @@
 Simulates sheep and grass and a raptor.
-https://andrewmaxwell.github.io/fun/?sheep
+https://andrewmaxwell.github.io/sheep-simulator/
 
 To play with the code:
 ```
