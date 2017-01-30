@@ -297,9 +297,9 @@
 	const dat = __webpack_require__(13);
 
 	const gameParams = {
-		width: 200,
-		height: 200,
-		startingSheep: 100,
+		width: 100,
+		height: 100,
+		startingSheep: 1,
 		grassGrowthRate: 0.0001, // each pixel gains x energy per iteration
 		eatAmountMult: 0.1, // sheep can eat x * the amount grass on a cell per iteration
 
@@ -312,7 +312,7 @@
 		rockThreshold: 0.45, // rocks cover roughly this much of the screen
 
 		raptorAppears: 100, // when sheep population reaches this level and there are no raptors, one appears
-		sightDistance: 32,
+		smellDistance: 16,
 		raptorSpeed: 0.02, // probability of moving two spaces
 		eatDuration: 100
 	};
@@ -368,6 +368,8 @@
 		gui.add(gameParams, 'startingSheep', 1, 500).step(1).onChange(reset);
 		gui.add(gameParams, 'rockThreshold', 0, 0.9).step(0.01).onChange(reset);
 		gui.add(gameParams, 'rockScale', 1, 100).onChange(reset);
+		gui.add(gameParams, 'smellDistance', 4, 50).step(1);
+
 		var o = {speed: 2};
 		gui.add(o, 'speed', {slow: 1, medium: 2, fast: 3}).onChange(() => {
 			slow = o.speed == 1;
@@ -1093,7 +1095,7 @@
 				height: params.height,
 				initCell: cell => {
 					cell.grass = 1;
-					cell.raptorDist = params.sightDistance + 1;
+					cell.raptorDist = params.smellDistance + 1;
 					cell.occupant = noise(
 						cell.x / params.rockScale,
 						cell.y / params.rockScale
@@ -1151,7 +1153,7 @@
 		}
 
 		function cellIsNearRaptor(cell){
-			return cell.raptorDist <= params.sightDistance;
+			return cell.raptorDist <= params.smellDistance;
 		}
 		function cellQualityForSheep(cell){
 			return !cell.occupant && (cell.raptorDist + cell.grass * 0.5);
@@ -1201,7 +1203,7 @@
 			}
 
 			var currentCell = grid.getCell(w);
-			var path = w.path = grid.getPath(currentCell, cellContainsASheep, params.sightDistance );
+			var path = w.path = grid.getPath(currentCell, cellContainsASheep, params.smellDistance );
 			var moveTo = (
 				(Math.random() < params.raptorSpeed) && path[path.length - 2]
 			) ||
@@ -1233,7 +1235,7 @@
 			}
 
 			for (var i = 0; i < raptors.length; i++){
-				grid.getPath(grid.getCell(raptors[i]), setRaptorDist, params.sightDistance);
+				grid.getPath(grid.getCell(raptors[i]), setRaptorDist, params.smellDistance);
 			}
 		}
 
@@ -1256,7 +1258,7 @@
 			stats.grass = 0;
 			for (var i = 0; i < grassCells.length; i++){
 				var cell = grassCells[i];
-				cell.raptorDist = params.sightDistance + 1;
+				cell.raptorDist = params.smellDistance + 1;
 				cell.grass = Math.min(1, cell.grass + params.grassGrowthRate);
 				stats.grass += cell.grass;
 			}

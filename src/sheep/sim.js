@@ -12,7 +12,7 @@ function makeSim(params){
 			height: params.height,
 			initCell: cell => {
 				cell.grass = 1;
-				cell.raptorDist = params.sightDistance + 1;
+				cell.raptorDist = params.smellDistance + 1;
 				cell.occupant = noise(
 					cell.x / params.rockScale,
 					cell.y / params.rockScale
@@ -70,7 +70,7 @@ function makeSim(params){
 	}
 
 	function cellIsNearRaptor(cell){
-		return cell.raptorDist <= params.sightDistance;
+		return cell.raptorDist <= params.smellDistance;
 	}
 	function cellQualityForSheep(cell){
 		return !cell.occupant && (cell.raptorDist + cell.grass * 0.5);
@@ -120,7 +120,7 @@ function makeSim(params){
 		}
 
 		var currentCell = grid.getCell(w);
-		var path = w.path = grid.getPath(currentCell, cellContainsASheep, params.sightDistance );
+		var path = w.path = grid.getPath(currentCell, cellContainsASheep, params.smellDistance );
 		var moveTo = (
 			(Math.random() < params.raptorSpeed) && path[path.length - 2]
 		) ||
@@ -152,7 +152,7 @@ function makeSim(params){
 		}
 
 		for (var i = 0; i < raptors.length; i++){
-			grid.getPath(grid.getCell(raptors[i]), setRaptorDist, params.sightDistance);
+			grid.getPath(grid.getCell(raptors[i]), setRaptorDist, params.smellDistance);
 		}
 	}
 
@@ -175,7 +175,7 @@ function makeSim(params){
 		stats.grass = 0;
 		for (var i = 0; i < grassCells.length; i++){
 			var cell = grassCells[i];
-			cell.raptorDist = params.sightDistance + 1;
+			cell.raptorDist = params.smellDistance + 1;
 			cell.grass = Math.min(1, cell.grass + params.grassGrowthRate);
 			stats.grass += cell.grass;
 		}
