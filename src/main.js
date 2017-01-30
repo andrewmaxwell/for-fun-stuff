@@ -63,7 +63,7 @@ function init(){
 	document.body.innerHTML += '<style>canvas {float: left}</style>';
 	document.body.style.margin = 0;
 
-	renderer.canvas.style.height = renderer.canvas.style.width = window.innerHeight + 'px';
+	renderer.canvas.style.height = renderer.canvas.style.width = '100vh';
 	renderer.canvas.ondblclick = reset;
 
 	document.body.appendChild(renderer.canvas);
