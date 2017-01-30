@@ -14,8 +14,8 @@ function makeSim(params){
 				cell.grass = 1;
 				cell.raptorDist = params.sightDistance + 1;
 				cell.occupant = noise(
-					cell.x / params.rockScaleX,
-					cell.y / params.rockScaleY
+					cell.x / params.rockScale,
+					cell.y / params.rockScale
 				) < params.rockThreshold;
 			}
 		});

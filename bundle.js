@@ -308,20 +308,13 @@
 		newbornEnergy: 0.01, // sheep start with x energy when they are born or reproduce
 		ageAmt: 0.00003, // sheep age this amount per iteration, they get e^-age times the nutrition, so at age 1, that's 37%
 
-		rockScaleX: 10, // rocks are stretched horizontally this much
-		rockScaleY: 10, // rocks are stretched veritcally this much
+		rockScale: 10,
 		rockThreshold: 0.45, // rocks cover roughly this much of the screen
 
 		raptorAppears: 100, // when sheep population reaches this level and there are no raptors, one appears
 		sightDistance: 32,
 		raptorSpeed: 0.02, // probability of moving two spaces
 		eatDuration: 100
-	};
-
-	const rendererParams = {
-		width: gameParams.width,
-		height: gameParams.height,
-		scale: 4
 	};
 
 	const barGraphParams = {
@@ -354,13 +347,17 @@
 
 	function init(){
 		sim = makeSim(gameParams);
-		renderer = makeRenderer(rendererParams);
+		renderer = makeRenderer(gameParams);
 		bars = makeBarGraph(barGraphParams);
 		stats = makeStatCanvas(statParams);
 		frame = 0;
 
 		document.body.innerHTML += '<style>canvas {float: left}</style>';
+		document.body.style.margin = 0;
+
+		renderer.canvas.style.height = renderer.canvas.style.width = window.innerHeight + 'px';
 		renderer.canvas.ondblclick = reset;
+
 		document.body.appendChild(renderer.canvas);
 		document.body.appendChild(bars.canvas);
 		document.body.appendChild(stats.canvas);
@@ -370,7 +367,7 @@
 		gui.add(gameParams, 'height', 20, 400).step(1).onChange(reset);
 		gui.add(gameParams, 'startingSheep', 1, 500).step(1).onChange(reset);
 		gui.add(gameParams, 'rockThreshold', 0, 0.9).step(0.01).onChange(reset);
-
+		gui.add(gameParams, 'rockScale', 1, 100).onChange(reset);
 		var o = {speed: 2};
 		gui.add(o, 'speed', {slow: 1, medium: 2, fast: 3}).onChange(() => {
 			slow = o.speed == 1;
@@ -382,6 +379,7 @@
 
 	function reset(){
 		stats.reset();
+		renderer.resize(gameParams.width, gameParams.height);
 		renderer.reset();
 		sim.reset();
 	}
@@ -430,27 +428,29 @@
 	const green = [0, 128, 0];
 	const white = [255, 255, 255];
 
-	function makeRenderer({width, height, scale}){
+	function makeRenderer({width, height}){
 
 		const canvas = document.createElement('canvas');
-
-		canvas.width = width;
-		canvas.height = height;
-		canvas.style.width = width * scale + 'px';
-		canvas.style.height = height * scale + 'px';
 		canvas.style['image-rendering'] = 'pixelated';
 
 		const ctx = canvas.getContext('2d', {alpha: false});
-		const imageData = ctx.createImageData(width, height);
-		const D = imageData.data;
 		const gradRes = 256;
 		const grassGradient = makeGradient(tan, green, gradRes);
 
+		var img, imgData;
+
+		function resize(w, h){
+			canvas.width = width = w;
+			canvas.height = height = h;
+			img = ctx.createImageData(width, height);
+			imgData = img.data;
+		}
+
 		function setColor(coord, color){
 			const k = 4 * (coord.y * width + coord.x);
-			D[k + 0] = color[0];
-			D[k + 1] = color[1];
-			D[k + 2] = color[2];
+			imgData[k + 0] = color[0];
+			imgData[k + 1] = color[1];
+			imgData[k + 2] = color[2];
 		}
 
 		function renderGrass(cells){
@@ -475,21 +475,24 @@
 			}
 		}
 
+		resize(width, height);
+
 		return {
 			canvas,
+			resize,
 			reset(){
-				for (var i = 0; i < D.length; i += 4){
-					D[i + 0] = 66;
-					D[i + 1] = 63;
-					D[i + 2] = 51;
-					D[i + 3] = 255;
+				for (var i = 0; i < imgData.length; i += 4){
+					imgData[i + 0] = 66;
+					imgData[i + 1] = 63;
+					imgData[i + 2] = 51;
+					imgData[i + 3] = 255;
 				}
 			},
 			render(cells, raptors, sheeps){
 				renderGrass(cells);
 				renderRaptors(raptors);
 				renderSheeps(sheeps);
-				ctx.putImageData(imageData, 0, 0);
+				ctx.putImageData(img, 0, 0);
 			}
 		};
 	}
@@ -1092,8 +1095,8 @@
 					cell.grass = 1;
 					cell.raptorDist = params.sightDistance + 1;
 					cell.occupant = noise(
-						cell.x / params.rockScaleX,
-						cell.y / params.rockScaleY
+						cell.x / params.rockScale,
+						cell.y / params.rockScale
 					) < params.rockThreshold;
 				}
 			});

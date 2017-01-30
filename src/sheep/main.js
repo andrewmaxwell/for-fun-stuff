@@ -16,20 +16,13 @@ const gameParams = {
 	newbornEnergy: 0.01, // sheep start with x energy when they are born or reproduce
 	ageAmt: 0.00003, // sheep age this amount per iteration, they get e^-age times the nutrition, so at age 1, that's 37%
 
-	rockScaleX: 10, // rocks are stretched horizontally this much
-	rockScaleY: 10, // rocks are stretched veritcally this much
+	rockScale: 10,
 	rockThreshold: 0.45, // rocks cover roughly this much of the screen
 
 	raptorAppears: 100, // when sheep population reaches this level and there are no raptors, one appears
 	sightDistance: 32,
 	raptorSpeed: 0.02, // probability of moving two spaces
 	eatDuration: 100
-};
-
-const rendererParams = {
-	width: gameParams.width,
-	height: gameParams.height,
-	scale: 4
 };
 
 const barGraphParams = {
@@ -62,13 +55,17 @@ var sim, renderer, bars, stats, frame;
 
 function init(){
 	sim = makeSim(gameParams);
-	renderer = makeRenderer(rendererParams);
+	renderer = makeRenderer(gameParams);
 	bars = makeBarGraph(barGraphParams);
 	stats = makeStatCanvas(statParams);
 	frame = 0;
 
 	document.body.innerHTML += '<style>canvas {float: left}</style>';
+	document.body.style.margin = 0;
+
+	renderer.canvas.style.height = renderer.canvas.style.width = window.innerHeight + 'px';
 	renderer.canvas.ondblclick = reset;
+
 	document.body.appendChild(renderer.canvas);
 	document.body.appendChild(bars.canvas);
 	document.body.appendChild(stats.canvas);
@@ -78,7 +75,7 @@ function init(){
 	gui.add(gameParams, 'height', 20, 400).step(1).onChange(reset);
 	gui.add(gameParams, 'startingSheep', 1, 500).step(1).onChange(reset);
 	gui.add(gameParams, 'rockThreshold', 0, 0.9).step(0.01).onChange(reset);
-
+	gui.add(gameParams, 'rockScale', 1, 100).onChange(reset);
 	var o = {speed: 2};
 	gui.add(o, 'speed', {slow: 1, medium: 2, fast: 3}).onChange(() => {
 		slow = o.speed == 1;
@@ -90,6 +87,7 @@ function init(){
 
 function reset(){
 	stats.reset();
+	renderer.resize(gameParams.width, gameParams.height);
 	renderer.reset();
 	sim.reset();
 }
