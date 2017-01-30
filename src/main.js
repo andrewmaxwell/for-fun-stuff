@@ -2,7 +2,7 @@ const makeRenderer = require('./renderer');
 const makeBarGraph = require('./barGraph');
 const makeStatCanvas = require('./stats');
 const makeSim = require('./sim');
-const dat = require('../shared/dat-gui');
+const dat = require('./dat-gui');
 
 const gameParams = {
 	width: 100,

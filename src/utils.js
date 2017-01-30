@@ -26,7 +26,7 @@ module.exports = {
 		return gradient;
 	},
 	noise: (() => {
-		const SimplexNoise = require('../shared/simplex');
+		const SimplexNoise = require('./simplex');
 		var simplex;
 		return (x, y) => {
 			simplex = simplex || new SimplexNoise();

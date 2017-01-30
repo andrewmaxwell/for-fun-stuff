@@ -1,4 +1,4 @@
-const {randomIndex, shuffle} = require('../shared/utils');
+const {randomIndex, shuffle} = require('./utils');
 const DIRECTIONS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 // const DIRECTIONS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
 

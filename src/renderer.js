@@ -1,4 +1,4 @@
-const {makeGradient} = require('../shared/utils');
+const {makeGradient} = require('./utils');
 const red = [255, 0, 0];
 const tan = [207, 197, 126];
 const yellow = [255, 255, 0];

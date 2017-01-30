@@ -1,5 +1,5 @@
 const Grid = require('./grid');
-const {randomIndex, noise} = require('../shared/utils');
+const {randomIndex, noise} = require('./utils');
 
 function makeSim(params){
 
