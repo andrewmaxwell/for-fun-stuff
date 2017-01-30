@@ -1,63 +1,59 @@
-const {randomIndex, shuffle} = require('./utils');
+const {randomIndex, shuffle} = require('../shared/utils');
 const DIRECTIONS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 // const DIRECTIONS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
 
 class Grid {
-	constructor({width, height, initCell, iterateCell}){
+	constructor({width, height, initCell}){
 
 		this.width = width;
 		this.height = height;
-		this.iterateCell = iterateCell;
 
-		var grid = this.grid = [];
+		var grid = this._grid = [];
 
-		for (let y = 0; y < height; y++){
-			grid[y] = [];
-			for (let x = 0; x < width; x++){
-				grid[y][x] = {
+		var x, y;
+		for (y = 0; y < height; y++){
+			for (x = 0; x < width; x++){
+				grid[y * width + x] = {
 					x, y,
 					id: y * width + x,
 					neighbors: []
 				};
-				initCell(grid[y][x]);
+				initCell(grid[y * width + x]);
 			}
 		}
-		for (let y = 0; y < height; y++){
-			for (let x = 0; x < width; x++){
-				shuffle(DIRECTIONS);
-				for (let i = 0; i < DIRECTIONS.length; i++){
-					let d = DIRECTIONS[i];
-					let row = grid[y + d[1]];
-					let cell = row && row[x + d[0]];
-					if (cell){
-						grid[y][x].neighbors.push(cell);
+		for (y = 0; y < height; y++){
+			for (x = 0; x < width; x++){
+				var cell = grid[y * width + x];
+				if (!cell.occupant){
+					for (var i = 0; i < DIRECTIONS.length; i++){
+						var nx = x + DIRECTIONS[i][0];
+						var ny = y + DIRECTIONS[i][1];
+						if (nx >= 0 && ny >= 0 && nx < width && ny < height && !grid[ny * width + nx].occupant){
+							cell.neighbors.push(grid[ny * width + nx]);
+						}
 					}
 				}
 			}
 		}
 	}
-	getCell(x, y){
-		return this.grid[y][x];
+	getCells(){
+		return this._grid;
 	}
-	getOccupant(x, y){
-		return this.getCell(x, y).occupant;
+	getCell(ob){
+		return this._grid[ob.y * this.width + ob.x];
+	}
+	getOccupant(ob){
+		return this.getCell(ob).occupant;
 	}
 	setOccupant(ob){
-		this.getCell(ob.x, ob.y).occupant = ob;
+		this.getCell(ob).occupant = ob;
 	}
 	removeOccupant(ob){
-		this.getCell(ob.x, ob.y).occupant = null;
-	}
-	eachCell(func){
-		for (let y = 0; y < this.width; y++){
-			for (let x = 0; x < this.height; x++){
-				func(this.getCell(x, y));
-			}
-		}
+		this.getCell(ob).occupant = null;
 	}
 	getBestNeighbor(currentCell, cellUtility){
-		let utilVals = currentCell.neighbors.map(cellUtility);
-		let maxUtilVal = Math.max(...utilVals);
+		var utilVals = currentCell.neighbors.map(cellUtility);
+		var maxUtilVal = Math.max(...utilVals);
 		return randomIndex(currentCell.neighbors.filter(
 			(n, i) => utilVals[i] > 0 && utilVals[i] == maxUtilVal
 		));
@@ -65,23 +61,23 @@ class Grid {
 	getPath(start, goalCondition, maxDist){
 		if (goalCondition(start, 0)) return [];
 
-		let queue = [start];
-		let seen = {};
+		var queue = [start];
+		var seen = {};
 
 		start.dist = 0;
 		seen[start.id] = true;
 
-		for (let i = 0; i < queue.length; i++){
-			let current = queue[i];
+		for (var i = 0; i < queue.length; i++){
+			var current = queue[i];
 			if (current.dist + 1 > maxDist) continue;
 
-			// shuffle(current.neighbors);
-			for (let j = 0; j < current.neighbors.length; j++){
-				let cell = current.neighbors[j];
+			shuffle(current.neighbors);
+			for (var j = 0; j < current.neighbors.length; j++){
+				var cell = current.neighbors[j];
 				if (!seen[cell.id]){
 
 					if (goalCondition(cell, current.dist + 1)){
-						let path = [cell];
+						var path = [cell];
 						while (current != start) {
 							path.push(current);
 							current = current.prev;
@@ -101,11 +97,11 @@ class Grid {
 		return [];
 	}
 	randomEmptySpace(){
-		let x, y;
+		var x, y;
 		do {
 			x = Math.floor(Math.random() * this.width);
 			y = Math.floor(Math.random() * this.height);
-		} while (this.getOccupant(x, y));
+		} while (this._grid[y * this.width + x].occupant);
 		return {x, y};
 	}
 }

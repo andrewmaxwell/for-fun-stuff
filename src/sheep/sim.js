@@ -1,13 +1,9 @@
 const Grid = require('./grid');
-const {randomIndex} = require('./utils');
-
-const SimplexNoise = require('./simplex');
-const simplex = new SimplexNoise();
-const noise = (x, y) => simplex.noise2D(x, y) * 0.5 + 0.5;
+const {randomIndex, noise} = require('../shared/utils');
 
 function makeSim(params){
 
-	var grid, sheeps, raptors;
+	var grid, grassCells, sheeps, raptors, stats;
 
 	function reset(){
 
@@ -15,7 +11,8 @@ function makeSim(params){
 			width: params.width,
 			height: params.height,
 			initCell: cell => {
-				cell.grass = 1;//Math.random();
+				cell.grass = 1;
+				cell.raptorDist = params.sightDistance + 1;
 				cell.occupant = noise(
 					cell.x / params.rockScaleX,
 					cell.y / params.rockScaleY
@@ -23,16 +20,26 @@ function makeSim(params){
 			}
 		});
 
+		grassCells = grid.getCells().filter(c => c.occupant !== true);
 		sheeps = [];
 		raptors = [];
 
-		for (let i = 0; i < params.startingSheep; i++){
+		for (var i = 0; i < params.startingSheep; i++){
 			addSheep(grid.randomEmptySpace());
 		}
+
+		stats = {
+			births: 0,
+			deaths: 0,
+			killed: 0,
+			population: sheeps.length,
+			grass: 0,
+			age: 0
+		};
 	}
 
 	function addSheep(coord){
-		let s = {
+		var s = {
 			x: coord.x,
 			y: coord.y,
 			energy: params.newbornEnergy,
@@ -43,7 +50,7 @@ function makeSim(params){
 	}
 
 	function addRaptor(coord){
-		let s = {
+		var s = {
 			x: coord.x,
 			y: coord.y,
 			path: []
@@ -62,26 +69,23 @@ function makeSim(params){
 		return false;
 	}
 
+	function cellIsNearRaptor(cell){
+		return cell.raptorDist <= params.sightDistance;
+	}
+	function cellQualityForSheep(cell){
+		return !cell.occupant && (cell.raptorDist + cell.grass * 0.5);
+	}
 	function moveSheep(s){
 
-		let currentCell = grid.getCell(s.x, s.y);
-
-		let isRunning = currentCell.neighbors.some(
-			n => n.raptorDist <= params.sightDistance
-		);
-
-		let moveTo = grid.getBestNeighbor(
-			currentCell,
-			cell => !cell.occupant && cell.raptorDist + cell.grass * 0.5
-		);
+		var currentCell = grid.getCell(s);
+		var isRunning = currentCell.neighbors.some(cellIsNearRaptor);
+		var moveTo = grid.getBestNeighbor(currentCell, cellQualityForSheep);
 
 		if (moveTo){
 			if (s.energy >= 1){
 				s.energy = params.newbornEnergy;
-				addSheep({
-					x: moveTo.x,
-					y: moveTo.y
-				});
+				stats.births++;
+				addSheep(moveTo);
 			} else {
 				currentCell.occupant = null;
 				currentCell = moveTo;
@@ -90,7 +94,7 @@ function makeSim(params){
 			}
 		}
 
-		let eatAmount = isRunning ? 0 : currentCell.grass * params.eatAmountMult;
+		var eatAmount = isRunning ? 0 : currentCell.grass * params.eatAmountMult;
 		s.energy = Math.max(0,
 			s.energy +
 			-params.energyLossRate +
@@ -102,17 +106,26 @@ function makeSim(params){
 		return s.energy > 0;
 	}
 
-
+	function cellContainsASheep(cell){
+		return cell.occupant && sheeps.includes(cell.occupant);
+	}
+	function cellIsUnoccupied(cell){
+		return !cell.occupant;
+	}
 	function moveRaptor(w){
 
-		let currentCell = grid.getCell(w.x, w.y);
-		let path = w.path = grid.getPath(
-				currentCell,
-				cell => cell.occupant && sheeps.includes(cell.occupant),
-				params.sightDistance
-			);
-		let moveTo = (1 + Math.random() < params.raptorSpeed && path[path.length - 2]) ||  path[path.length - 1] ||
-			randomIndex(currentCell.neighbors.filter(n => !n.occupant));
+		if (w.eating){
+			w.eating--;
+			return;
+		}
+
+		var currentCell = grid.getCell(w);
+		var path = w.path = grid.getPath(currentCell, cellContainsASheep, params.sightDistance );
+		var moveTo = (
+			(Math.random() < params.raptorSpeed) && path[path.length - 2]
+		) ||
+		path[path.length - 1] ||
+		randomIndex(currentCell.neighbors.filter(cellIsUnoccupied));
 
 		if (moveTo){
 			currentCell.occupant = null;
@@ -120,50 +133,61 @@ function makeSim(params){
 			w.y = moveTo.y;
 			if (moveTo.occupant){
 				killSheep(sheeps.indexOf(moveTo.occupant));
+				stats.killed++;
+				w.eating = params.eatDuration;
+				w.path = [];
 			}
 			moveTo.occupant = w;
 		}
 
 	}
 
-	function calculateRaptorsDistances(){
-		grid.eachCell(cell => {
-			cell.raptorDist = params.sightDistance + 1;
-		});
+	function setRaptorDist(cell, dist){
+		cell.raptorDist = Math.min(cell.raptorDist, dist);
+		return false;
+	}
+	function calculateRaptorDists(){
+		if (!raptors.length && sheeps.length >= params.raptorAppears){
+			addRaptor(grid.randomEmptySpace());
+		}
 
-		raptors.forEach(r => {
-			grid.getPath(grid.getCell(r.x, r.y), (cell, dist) => {
-				cell.raptorDist = Math.min(cell.raptorDist, dist);
-				return false;
-			}, params.sightDistance);
-		});
+		for (var i = 0; i < raptors.length; i++){
+			grid.getPath(grid.getCell(raptors[i]), setRaptorDist, params.sightDistance);
+		}
 	}
 
-	reset();
+	function iterateSheeps(){
+		for (var i = 0; i < sheeps.length; i++){
+			if (!moveSheep(sheeps[i])){
+				killSheep(i--);
+				stats.deaths++;
+			}
+		}
+	}
+
+	function iterateRaptors(){
+		for (var i = 0; i < raptors.length; i++){
+			moveRaptor(raptors[i]);
+		}
+	}
+
+	function iterateGrass(){
+		stats.grass = 0;
+		for (var i = 0; i < grassCells.length; i++){
+			var cell = grassCells[i];
+			cell.raptorDist = params.sightDistance + 1;
+			cell.grass = Math.min(1, cell.grass + params.grassGrowthRate);
+			stats.grass += cell.grass;
+		}
+	}
 
 	return {
 		reset,
 		iterate(){
-
-			if (!raptors.length && sheeps.length >= params.raptorAppears){
-				addRaptor(grid.randomEmptySpace());
-			}
-
-			calculateRaptorsDistances();
-
-			for (let s = 0; s < sheeps.length; s++){
-				if (!moveSheep(sheeps[s])){
-					killSheep(s--);
-				}
-			}
-
-			for (let w = 0; w < raptors.length; w++){
-				moveRaptor(raptors[w]);
-			}
-
-			grid.eachCell(cell => {
-				cell.grass = Math.min(1, cell.grass + params.grassGrowthRate);
-			});
+			calculateRaptorDists();
+			iterateSheeps();
+			iterateRaptors();
+			iterateGrass();
 		},
 		getSheeps(){
 			return sheeps;
@@ -171,8 +195,18 @@ function makeSim(params){
 		getRaptors(){
 			return raptors;
 		},
-		getGrid(){
-			return grid;
+		getGrassCells(){
+			return grassCells;
+		},
+		getStats(){
+			var totalAge = 0;
+			for (var i = 0; i < sheeps.length; i++){
+				totalAge += sheeps[i].age;
+			}
+			stats.age = totalAge / sheeps.length;
+			stats.population = sheeps.length;
+
+			return stats;
 		}
 	};
 }

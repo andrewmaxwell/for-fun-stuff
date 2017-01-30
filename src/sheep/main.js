@@ -1,14 +1,13 @@
 const makeRenderer = require('./renderer');
+const makeBarGraph = require('./barGraph');
 const makeStatCanvas = require('./stats');
 const makeSim = require('./sim');
+const dat = require('../shared/dat-gui');
 
-const scale = 4;
-const speed = 1;
-
-const params = {
+const gameParams = {
 	width: 200,
 	height: 200,
-	startingSheep: 300,
+	startingSheep: 100,
 	grassGrowthRate: 0.0001, // each pixel gains x energy per iteration
 	eatAmountMult: 0.1, // sheep can eat x * the amount grass on a cell per iteration
 
@@ -17,41 +16,112 @@ const params = {
 	newbornEnergy: 0.01, // sheep start with x energy when they are born or reproduce
 	ageAmt: 0.00003, // sheep age this amount per iteration, they get e^-age times the nutrition, so at age 1, that's 37%
 
-	rockScaleX: 30, // rocks are stretched horizontally this much
+	rockScaleX: 10, // rocks are stretched horizontally this much
 	rockScaleY: 10, // rocks are stretched veritcally this much
-	rockThreshold: 0.35, // rocks cover roughly this much of the screen
+	rockThreshold: 0.45, // rocks cover roughly this much of the screen
 
 	raptorAppears: 100, // when sheep population reaches this level and there are no raptors, one appears
 	sightDistance: 32,
-	raptorSpeed: 1.25 // x times the speed of a sheep
-	// raptorStartingEnergy: 100
+	raptorSpeed: 0.02, // probability of moving two spaces
+	eatDuration: 100
 };
 
-const game = makeSim(params);
-const renderer = makeRenderer(game, params, scale);
-const stats = makeStatCanvas({
-	width: 300,
-	height: scale * params.height,
+const rendererParams = {
+	width: gameParams.width,
+	height: gameParams.height,
+	scale: 4
+};
+
+const barGraphParams = {
+	width: 800,
+	height: 300,
 	cols: [
-		{prop: 'age', color: '#AAA'},
+		{prop: 'age', color: 'gray'},
 		{prop: 'energy', color: 'green'}
 	]
-});
-
-document.body.style.margin = 0;
-document.body.appendChild(renderer.canvas);
-document.body.appendChild(stats.canvas);
-
-var loop = () => {
-	for (var s = 0; s < speed; s++) game.iterate();
-
-	renderer.render();
-
-	stats.render(game.getSheeps());
-
-	// setTimeout(loop, 200);
-	requestAnimationFrame(loop);
 };
-loop();
 
-renderer.canvas.ondblclick = () => game.reset();
+var speed = 1;
+var slow = false;
+var statFrequency = 10;
+
+const statParams = {
+	width: 800,
+	height: 300,
+	stats: [
+		{prop: 'births', color: 'yellow', per: 200 / speed},
+		{prop: 'deaths', color: 'blue', per: 200 / speed},
+		{prop: 'killed', color: 'red', per: 2000 / speed},
+		{prop: 'population', color: 'white', min: 0},
+		{prop: 'grass', color: 'green', min: 0, disp: v => Math.round(v)},
+		{prop: 'age', color: 'gray', disp: v => Math.round(v / gameParams.ageAmt)}
+	]
+};
+
+var sim, renderer, bars, stats, frame;
+
+function init(){
+	sim = makeSim(gameParams);
+	renderer = makeRenderer(rendererParams);
+	bars = makeBarGraph(barGraphParams);
+	stats = makeStatCanvas(statParams);
+	frame = 0;
+
+	document.body.innerHTML += '<style>canvas {float: left}</style>';
+	renderer.canvas.ondblclick = reset;
+	document.body.appendChild(renderer.canvas);
+	document.body.appendChild(bars.canvas);
+	document.body.appendChild(stats.canvas);
+
+	var gui = new dat.GUI();
+	gui.add(gameParams, 'width', 20, 400).step(1).onChange(reset);
+	gui.add(gameParams, 'height', 20, 400).step(1).onChange(reset);
+	gui.add(gameParams, 'startingSheep', 1, 500).step(1).onChange(reset);
+	gui.add(gameParams, 'rockThreshold', 0, 0.9).step(0.01).onChange(reset);
+
+	var o = {speed: 2};
+	gui.add(o, 'speed', {slow: 1, medium: 2, fast: 3}).onChange(() => {
+		slow = o.speed == 1;
+		speed = o.speed == 3 ? 10 : 1;
+	});
+	reset();
+	loop();
+}
+
+function reset(){
+	stats.reset();
+	renderer.reset();
+	sim.reset();
+}
+
+function loop(){
+
+	if (!slow) requestAnimationFrame(loop);
+
+	for (var s = 0; s < speed; s++){
+		sim.iterate();
+	}
+
+	renderer.render(
+		sim.getGrassCells(),
+		sim.getRaptors(),
+		sim.getSheeps()
+	);
+
+	if (slow || (frame % statFrequency === 0)){
+		bars.render(
+			sim.getSheeps()
+		);
+
+		stats.update(
+			sim.getStats()
+		);
+		stats.render();
+	}
+
+	frame++;
+
+	if (slow) setTimeout(loop, 200);
+}
+
+init();
