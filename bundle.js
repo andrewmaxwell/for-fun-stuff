@@ -51,8 +51,8 @@
 	const dat = __webpack_require__(8);
 
 	const gameParams = {
-		width: 100,
-		height: 100,
+		width: 200,
+		height: 200,
 		startingSheep: 1,
 		grassGrowthRate: 0.0001, // each pixel gains x energy per iteration
 		eatAmountMult: 0.1, // sheep can eat x * the amount grass on a cell per iteration
@@ -109,7 +109,7 @@
 		document.body.innerHTML += '<style>canvas {float: left}</style>';
 		document.body.style.margin = 0;
 
-		renderer.canvas.style.height = renderer.canvas.style.width = window.innerHeight + 'px';
+		renderer.canvas.style.height = renderer.canvas.style.width = '100vh';
 		renderer.canvas.ondblclick = reset;
 
 		document.body.appendChild(renderer.canvas);

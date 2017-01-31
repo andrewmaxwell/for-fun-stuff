@@ -5,8 +5,8 @@ const makeSim = require('./sim');
 const dat = require('./dat-gui');
 
 const gameParams = {
-	width: 100,
-	height: 100,
+	width: 200,
+	height: 200,
 	startingSheep: 1,
 	grassGrowthRate: 0.0001, // each pixel gains x energy per iteration
 	eatAmountMult: 0.1, // sheep can eat x * the amount grass on a cell per iteration
